@@ -1,0 +1,26 @@
+/*
+  Extra UI styles (kept consistent with the main pixel theme).
+  This file should only contain small overrides or additions.
+*/
+
+/* Slightly tighter spacing for option buttons on small screens */
+@media (max-width: 768px) {
+  .options-container {
+    gap: 8px;
+  }
+
+  .choice-btn {
+    padding: 10px 10px;
+    font-size: 12px;
+  }
+
+  .url-input-row {
+    flex-direction: column;
+  }
+}
+
+/* Make storyboard images look more like "game frames" */
+.assistant-message .message-content img {
+  border: 3px solid #ffd700;
+  box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.65);
+}
