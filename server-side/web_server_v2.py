@@ -13,21 +13,24 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
 from gemini_assistant import GeminiGameAssistant
-from game_agent import generate_game_html # <--- הייבוא היחיד שאנחנו צריכות!
+from game_agent import generate_game_html
 
 load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+base_dir = os.path.abspath(os.path.dirname(__file__))
+client_side_dir = os.path.join(base_dir, "..", "client-side")
+
 app = Flask(
     __name__,
-    template_folder=os.path.join(os.path.dirname(__file__), "..", "client-side", "templates"),
-    static_folder=os.path.join(os.path.dirname(__file__), "..", "client-side", "static"),
+    template_folder=os.path.join(client_side_dir, "templates"),
+    static_folder=os.path.join(client_side_dir, "static"),
 )
 CORS(app)
 
-# --- הגדרת התיקיות נטו ---
+
 UPLOAD_FOLDER = os.path.join(app.static_folder, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -196,7 +199,7 @@ def finalize_structured_conversation(session_id: str) -> dict:
 
     return {
         "message": msg,
-        "type": "game_ready", # שינינו לטייפ חדש כדי שהפרונטאנד יידע מה לעשות
+        "type": "game_ready",
         "game_url": game_url,
         "options": []
     }
