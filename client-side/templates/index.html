@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Storybased Game Maker</title>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_extra.css') }}" />
+  </head>
+
+  <body>
+    <div class="chat-container">
+      <!-- Header -->
+      <header class="chat-header">
+        <div class="header-content">
+          <h1>Storybased Game Maker</h1>
+          <p class="status" aria-live="polite">Online</p>
+        </div>
+
+        <div class="header-buttons">
+          <button class="header-btn play-btn" id="playBtn" type="button">▶ Play</button>
+          <button class="header-btn export-btn" id="exportBtn" type="button">⬇ Export Game</button>
+          <button class="menu-btn" id="menuBtn" type="button" aria-label="Open menu">⋮</button>
+        </div>
+      </header>
+
+      <!-- Messages -->
+      <main class="chat-messages" id="chatMessages">
+        <div class="message assistant-message">
+          <div class="message-content">
+            <p>
+              Welcome! Answer a few quick questions and I’ll generate a custom platform game for you.
+            </p>
+            <p><strong>First — what’s your name?</strong></p>
+          </div>
+        </div>
+      </main>
+
+      <!-- Input -->
+      <footer class="chat-input-container">
+        <div class="input-wrapper">
+          <textarea
+            id="messageInput"
+            class="message-input"
+            placeholder="Type your message here..."
+            rows="1"
+            aria-label="Message input"
+          ></textarea>
+
+          <button class="send-btn" id="sendBtn" type="button" aria-label="Send message">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Menu -->
+    <div class="menu" id="menu" role="menu" aria-label="Menu">
+      <button class="menu-item" id="clearBtn" type="button" role="menuitem">Clear Chat</button>
+      <button class="menu-item" id="aboutBtn" type="button" role="menuitem">About</button>
+    </div>
+
+    <script src="{{ url_for('static', filename='script_v2.js') }}"></script>
+  </body>
+</html>

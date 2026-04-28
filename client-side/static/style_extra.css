@@ -1,0 +1,39 @@
+/* Extra UI overrides — consistent with pink/green pixel theme */
+
+@media (max-width: 768px) {
+  .options-container { gap: 8px; }
+  .choice-btn { padding: 8px 10px; font-size: 8px; }
+  .url-input-row { flex-direction: column; }
+}
+
+/* Storyboard / game images */
+.assistant-message .message-content img {
+  border: 3px solid #1A1A1A;
+  box-shadow: 6px 6px 0px #1A1A1A;
+  display: block;
+  margin-top: 8px;
+}
+
+/* Play game button container */
+.play-container button {
+  font-family: 'Press Start 2P', 'Courier New', monospace !important;
+  font-size: 11px !important;
+  border: 3px solid #1A1A1A !important;
+  border-radius: 0 !important;
+  background: #E8187E !important;
+  color: #FFFFFF !important;
+  box-shadow: 4px 4px 0px #1A1A1A !important;
+  text-shadow: 1px 1px 0px #B5116A !important;
+  transition: transform 0.1s, box-shadow 0.1s !important;
+}
+
+.play-container button:hover {
+  background: #B5116A !important;
+  transform: translate(-2px, -2px) !important;
+  box-shadow: 6px 6px 0px #1A1A1A !important;
+}
+
+.play-container button:active {
+  transform: translate(2px, 2px) !important;
+  box-shadow: 2px 2px 0px #1A1A1A !important;
+}
