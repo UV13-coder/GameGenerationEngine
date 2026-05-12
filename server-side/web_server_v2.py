@@ -171,37 +171,32 @@ def finalize_structured_conversation(session_id: str) -> dict:
     answers = user_states[session_id]["answers"]
     game_params_json = _map_answers_to_game_json(answers)
 
-    logger.info("מתחיל לייצר את קוד המשחק מול ג'מיני...")
-
     hero_desc = game_params_json.get("character", "Hero")
-    env_desc = game_params_json.get("background", "Level")
+    env_desc  = game_params_json.get("background", "Level")
     goal_desc = game_params_json.get("target", "Goal")
-    obs_desc = game_params_json.get("obstacles", "Enemies")
-
-    # הפעלת הסוכן ליצירת המשחק
-    game_html = generate_game_html(hero_desc, env_desc, goal_desc, obs_desc)
+    obs_desc  = game_params_json.get("obstacles", "Enemies")
 
     game_url = None
+    game_html = generate_game_html(hero_desc, env_desc, goal_desc, obs_desc)
     if game_html != "Error":
         game_filename = f"game_{uuid.uuid4().hex[:6]}.html"
         game_path = os.path.join(GAMES_FOLDER, game_filename)
         with open(game_path, "w", encoding="utf-8") as f:
             f.write(game_html)
         game_url = f"/static/games/{game_filename}"
-
-    user_name = (answers.get("name") or "").strip()
-
-    if not game_url:
-        msg = f"Sorry{', ' + user_name if user_name else ''}, the game generation servers are too busy right now. Please try again later."
+    else:
+        user_name = (answers.get("name") or "").strip()
+        msg = f"Sorry{', ' + user_name if user_name else ''}, the game generation failed. Please try again."
         return {"message": msg, "type": "text", "options": []}
 
-    msg = f"Boom{', ' + user_name if user_name else ''}! Your playable game is ready! 👇"
-
+    user_states[session_id]["current_question"] = "complete"
+    user_name = (answers.get("name") or "").strip()
+    msg = f"Your game is ready{', ' + user_name if user_name else ''}! 🎮"
     return {
         "message": msg,
         "type": "game_ready",
         "game_url": game_url,
-        "options": []
+        "options": [],
     }
 
 

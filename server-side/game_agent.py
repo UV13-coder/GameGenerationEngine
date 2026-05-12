@@ -1,121 +1,134 @@
-from google import genai
 import os
 import time
 
-# הגדרת המפתח והלקוח
-API_KEY = "AIzaSyDrd_FzseeDTj5PMaQrBuJ7LBiFjOv10r4"
-client = genai.Client(api_key=API_KEY)
+import anthropic
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+
+client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+MODEL = "claude-haiku-4-5-20251001"
 
 
-# =====================================================================
-# 1. גרסת ה-MOCK (פעילה כרגע)
-# מחזירה משחק דמה מיידי כדי שנוכל לבדוק את האתר בלי לחכות לשרתים
-# =====================================================================
+def _build_prompt(hero_desc, environment_desc, goal_desc, obstacle_desc):
+    return f"""You are an expert game developer. Write a complete, single-file HTML5 canvas game.
+Output ONLY raw HTML — no markdown, no code fences, no explanations.
+
+Game details:
+- Hero: {hero_desc}
+- Environment: {environment_desc}
+- Goal: {goal_desc}
+- Obstacles: {obstacle_desc}
+
+PIXEL ART CHARACTER SYSTEM (critical — read carefully):
+All characters must be drawn as pixel art using canvas rectangles. Use this exact technique:
+
+1. Define each character as a 2D array of color strings. Empty string means transparent.
+   Example for a simple character:
+   const heroSprite = [
+     ['', '#FF0000', '#FF0000', ''],
+     ['#FF0000', '#FFAA00', '#FFAA00', '#FF0000'],
+     ['', '#FF0000', '#FF0000', ''],
+   ];
+
+2. Draw sprites using this function:
+   function drawSprite(sprite, x, y, scale) {{
+     sprite.forEach((row, r) => {{
+       row.forEach((color, c) => {{
+         if (color) {{
+           ctx.fillStyle = color;
+           ctx.fillRect(x + c * scale, y + r * scale, scale, scale);
+         }}
+       }});
+     }});
+   }}
+
+3. Use scale=8 for characters (each pixel = 8x8 canvas pixels), giving large ~128x128 sprites on screen.
+
+4. Design pixel art sprites that actually look like the character described:
+   - {hero_desc}: design a 16x16 pixel art sprite with colors and shape matching this character. Think about their iconic colors, outfit, and silhouette.
+   - Obstacles ({obstacle_desc}): design a different 16x16 pixel art sprite that fits the obstacle description.
+   - Goal object: design a small 8x8 pixel art sprite (scale=3) for what the hero is trying to reach.
+
+CANVAS & BACKGROUND:
+5. Use a <canvas> sized 1400x550. Center it on the page with a black background.
+6. Draw a themed scrolling background matching "{environment_desc}":
+   - City/New York: dark blue sky, 6-8 gray building rectangles of varied heights, yellow window rectangles
+   - Jungle: dark green sky, brown tree trunks, large green canopy rectangles
+   - Space: black background, many small white star dots
+   - Desert: orange sky, sand dunes, cacti shapes
+   - For any environment: use at least 4 distinct background elements with fitting colors
+7. Draw a thick ground rectangle at y=490, colored to match the environment.
+
+GAMEPLAY:
+8. Arrow keys move the hero left/right. Up arrow or Space to jump.
+9. Gravity must feel natural (add a gravity constant ~0.5 each frame, reset on landing).
+10. No double jump — only jump when touching the ground.
+11. Implement a scrolling camera: as the hero moves right past x=700, scroll the background left so the level feels very long.
+12. The full level is 5000px wide. Place 15-20 obstacles spread across the level.
+13. Place 4-5 elevated platforms the hero can jump onto across the level.
+14. Collision with an obstacle = Game Over with a Restart button.
+15. Reaching the end of the level (x > 4800) = Win screen with a Play Again button.
+16. Score counter top-left, increases as the hero moves right.
+17. Use requestAnimationFrame for the game loop.
+18. Single HTML file, no external dependencies."""
+
+
+def _build_repair_prompt(broken_html, reason):
+    return f"""The following HTML game has a problem: {reason}
+
+Fix it and return ONLY the corrected raw HTML. No markdown, no explanations.
+
+BROKEN CODE:
+{broken_html}"""
+
+
+def _clean_html(text):
+    text = text.strip()
+    if "```html" in text:
+        text = text.split("```html", 1)[1]
+        if "```" in text:
+            text = text.split("```")[0]
+    elif "```" in text:
+        text = text.split("```", 1)[1]
+        if "```" in text:
+            text = text.split("```")[0]
+    return text.strip()
+
+
+def _is_valid_game(html):
+    return (
+        "<canvas" in html
+        and "<script" in html
+        and "requestAnimationFrame" in html
+    )
+
+
 def generate_game_html(hero_desc, environment_desc, goal_desc, obstacle_desc):
-    print(f"מתחיל לתכנן משחק עם: {hero_desc} ב-{environment_desc}...")
-    print("🤖 מזהה עומס בשרתים: עובר למצב Mock (משחק מדומה לצורך בדיקות תוכנה)...")
+    print(f"Generating game: {hero_desc} in {environment_desc}...")
 
-    mock_game_html = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>{hero_desc}'s Adventure</title>
-        <style>
-            body {{ margin: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background-color: #222; color: white; font-family: sans-serif; }}
-            #gameCanvas {{ background-color: #87CEEB; border: 4px solid #fff; border-radius: 10px; margin-top: 20px; }}
-            .info-box {{ background: rgba(255,255,255,0.1); padding: 15px; border-radius: 8px; text-align: center; }}
-        </style>
-    </head>
-    <body>
-        <div class="info-box">
-            <h1 style="margin:0; color: #00C9FF;">🎮 THE {hero_desc.upper()} GAME</h1>
-            <p style="font-size: 18px; margin: 5px 0;"><strong>Location:</strong> {environment_desc}</p>
-            <p style="font-size: 18px; margin: 5px 0;"><strong>Mission:</strong> {goal_desc}</p>
-            <p style="font-size: 18px; margin: 5px 0; color: #FF512F;"><strong>Watch out for:</strong> {obstacle_desc}</p>
-        </div>
+    prompt = _build_prompt(hero_desc, environment_desc, goal_desc, obstacle_desc)
 
-        <canvas id="gameCanvas" width="800" height="400"></canvas>
-
-        <script>
-            const canvas = document.getElementById('gameCanvas');
-            const ctx = canvas.getContext('2d');
-            let x = 50;
-
-            function draw() {{
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                ctx.fillStyle = '#228B22';
-                ctx.fillRect(0, 350, canvas.width, 50);
-
-                ctx.fillStyle = '#FF512F';
-                ctx.fillRect(x, 300, 50, 50); 
-
-                x += 3;
-                if(x > canvas.width) x = -50;
-
-                requestAnimationFrame(draw);
-            }}
-            draw();
-        </script>
-    </body>
-    </html>
-    """
-    return mock_game_html.strip()
-
-
-# =====================================================================
-# 2. הגרסה האמיתית (מכובה כרגע בהערה)
-# כשהשרתים של גוגל יחזרו לעבוד, פשוט תמחקי את ה-Mock שלמעלה,
-# ותמחקי את הגרשיים ( """) שעוטפים את הפונקציה הזו למטה!
-# =====================================================================
-"""
-def generate_game_html(hero_desc, environment_desc, goal_desc, obstacle_desc):
-    print(f"מתחיל לתכנן משחק עם: {hero_desc} ב-{environment_desc}...")
-
-    prompt = f'''
-    You are an expert game developer. Write a complete, single-file HTML5 canvas game.
-    Do NOT include any markdown formatting (like ```html), explanations, or text outside the HTML. Output ONLY the raw HTML code.
-
-    Game Elements:
-    - Hero: {hero_desc} 
-    - Environment: {environment_desc}
-    - Goal: {goal_desc}
-    - Obstacles: {obstacle_desc}
-
-    Graphics & Proportions (CRITICAL):
-    - Use JavaScript's Image() to load: 'static/bg.png', 'static/hero.png', 'static/taxi.png', 'static/princess.png'.
-    - Background: Draw to completely fill the canvas.
-    - Hero & Obstacles: You MUST maintain their original aspect ratio. Scale the hero to be roughly 15% of the canvas height. Scale obstacles proportionally. 
-
-    Mechanics & Physics (STRICT RULES):
-    1. Movement: Smooth left/right movement using Arrow keys. Do NOT make the movement too fast.
-    2. Jumping: You MUST implement an 'isGrounded' check. The hero CANNOT double jump. They can only jump if they are touching the ground or a platform. Gravity should feel natural.
-    3. Obstacles: Obstacles MUST spawn continuously on the right side of the screen and move leftwards towards the hero.
-    4. Platforms: Generate 3-4 floating platforms (draw them as simple colored rectangles for now) that the hero can jump onto and stand on.
-    5. Win/Loss: Collision with moving obstacles = Game Over. Reaching the Goal (placed at the far right or top) = Win.
-    '''
-
-    max_retries = 3
-    for attempt in range(max_retries):
+    for attempt in range(3):
         try:
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=prompt
+            print(f"Attempt {attempt + 1}/3...")
+            message = client.messages.create(
+                model=MODEL,
+                max_tokens=8192,
+                messages=[{"role": "user", "content": prompt}],
             )
+            html = _clean_html(message.content[0].text)
 
-            html_content = response.text.strip()
+            if _is_valid_game(html):
+                print("Game generated successfully.")
+                return html
 
-            if html_content.startswith("```html"):
-                html_content = html_content[7:]
-            if html_content.endswith("```"):
-                html_content = html_content[:-3]
-
-            return html_content.strip()
+            print(f"Attempt {attempt + 1}: output missing required elements, retrying...")
+            prompt = _build_repair_prompt(html, "missing <canvas>, <script>, or requestAnimationFrame")
 
         except Exception as e:
-            print(f"⚠️ השרת עמוס (ניסיון {attempt + 1} מתוך {max_retries}). ממתין 15 שניות ומנסה שוב אוטומטית...")
-            time.sleep(15)
+            print(f"Attempt {attempt + 1} failed: {e}")
+            if attempt < 2:
+                time.sleep(5)
 
     return "Error"
-"""

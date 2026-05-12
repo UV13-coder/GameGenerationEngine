@@ -142,6 +142,7 @@ class ChatApp {
       let assistantText = data.response || "";
       assistantText = this._maybePersonalize(assistantText);
 
+<<<<<<< HEAD
       // --- זיהוי התשובות מהשרת ---
       if (data.type === "storyboard" && data.image_url) {
         this.addMessage(assistantText, "assistant");
@@ -151,6 +152,10 @@ class ChatApp {
 
       } else if (data.type === "game_ready" && data.game_url) {
         // השרת אומר שהמשחק מוכן! מציירים את הכפתור
+=======
+      // --- handle server response types ---
+      if (data.type === "game_ready" && data.game_url) {
+>>>>>>> origin/main
         this.addMessage(assistantText, "assistant");
         this.messageHistory.push({ role: "assistant", content: assistantText });
         this.renderPlayButton(data.game_url);

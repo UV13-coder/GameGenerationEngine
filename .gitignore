@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+venv/
+.venv/
+client-side/static/uploads/
+client-side/static/games/
+client-side/static/storyboards/
+server-side/tmp_storyboards/
